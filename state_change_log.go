@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jinzhu/gorm"
-	"github.com/qor/admin"
 	"github.com/qor/audited"
-	"github.com/qor/qor/resource"
-	"github.com/qor/roles"
+	"gorm.io/gorm"
 )
 
 // StateChangeLog a model that used to keep state change logs
@@ -52,7 +49,7 @@ func GetStateChangeLogs(model interface{}, db *gorm.DB) []StateChangeLog {
 func GetLastStateChange(model interface{}, db *gorm.DB) *StateChangeLog {
 	var (
 		changelog StateChangeLog
-		scope      = db.NewScope(model)
+		scope     = db.NewScope(model)
 	)
 
 	db.Where("refer_table = ? AND refer_id = ?", scope.TableName(), GenerateReferenceKey(model, db)).Last(&changelog)
@@ -60,15 +57,4 @@ func GetLastStateChange(model interface{}, db *gorm.DB) *StateChangeLog {
 		return nil
 	}
 	return &changelog
-}
-
-// ConfigureQorResource used to configure transition for qor admin
-func (stageChangeLog *StateChangeLog) ConfigureQorResource(res resource.Resourcer) {
-	if res, ok := res.(*admin.Resource); ok {
-		if res.Permission == nil {
-			res.Permission = roles.Deny(roles.Update, roles.Anyone).Deny(roles.Create, roles.Anyone)
-		} else {
-			res.Permission = res.Permission.Deny(roles.Update, roles.Anyone).Deny(roles.Create, roles.Anyone)
-		}
-	}
 }
