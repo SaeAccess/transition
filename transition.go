@@ -67,13 +67,8 @@ func (sm *StateMachine) Event(name string) *Event {
 // Trigger trigger an event
 func (sm *StateMachine) Trigger(name string, value Stater, tx *gorm.DB, notes ...string) error {
 	var (
-		newTx    *gorm.DB
 		stateWas = value.GetState()
 	)
-
-	if tx != nil {
-		newTx = tx.New()
-	}
 
 	if stateWas == "" {
 		stateWas = sm.initialState
@@ -103,7 +98,7 @@ func (sm *StateMachine) Trigger(name string, value Stater, tx *gorm.DB, notes ..
 			// State: exit
 			if state, ok := sm.states[stateWas]; ok {
 				for _, exit := range state.exits {
-					if err := exit(value, newTx); err != nil {
+					if err := exit(value, tx); err != nil {
 						return err
 					}
 				}
@@ -111,7 +106,7 @@ func (sm *StateMachine) Trigger(name string, value Stater, tx *gorm.DB, notes ..
 
 			// Transition: before
 			for _, before := range transition.befores {
-				if err := before(value, newTx); err != nil {
+				if err := before(value, tx); err != nil {
 					return err
 				}
 			}
@@ -121,7 +116,7 @@ func (sm *StateMachine) Trigger(name string, value Stater, tx *gorm.DB, notes ..
 			// State: enter
 			if state, ok := sm.states[transition.to]; ok {
 				for _, enter := range state.enters {
-					if err := enter(value, newTx); err != nil {
+					if err := enter(value, tx); err != nil {
 						value.SetState(stateWas)
 						return err
 					}
@@ -130,22 +125,22 @@ func (sm *StateMachine) Trigger(name string, value Stater, tx *gorm.DB, notes ..
 
 			// Transition: after
 			for _, after := range transition.afters {
-				if err := after(value, newTx); err != nil {
+				if err := after(value, tx); err != nil {
 					value.SetState(stateWas)
 					return err
 				}
 			}
 
-			if newTx != nil {
-				scope := newTx.NewScope(value)
+			if tx != nil {
+				//				scope := newTx.NewScope(value)
 				log := StateChangeLog{
-					ReferTable: scope.TableName(),
+					ReferTable: tx.TableName(),
 					ReferID:    GenerateReferenceKey(value, tx),
 					From:       stateWas,
 					To:         transition.to,
 					Note:       strings.Join(notes, ""),
 				}
-				return newTx.Save(&log).Error
+				return tx.Save(&log).Error
 			}
 
 			return nil
