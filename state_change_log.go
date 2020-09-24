@@ -22,11 +22,10 @@ type StateChangeLog struct {
 // GenerateReferenceKey generate reference key used for change log
 func GenerateReferenceKey(model interface{}, db *gorm.DB) string {
 	var (
-		scope         = db.NewScope(model)
 		primaryValues []string
 	)
 
-	for _, field := range scope.PrimaryFields() {
+	for _, field := range db.PrimaryFields() {
 		primaryValues = append(primaryValues, fmt.Sprint(field.Field.Interface()))
 	}
 
@@ -37,10 +36,9 @@ func GenerateReferenceKey(model interface{}, db *gorm.DB) string {
 func GetStateChangeLogs(model interface{}, db *gorm.DB) []StateChangeLog {
 	var (
 		changelogs []StateChangeLog
-		scope      = db.NewScope(model)
 	)
 
-	db.Where("refer_table = ? AND refer_id = ?", scope.TableName(), GenerateReferenceKey(model, db)).Find(&changelogs)
+	db.Where("refer_table = ? AND refer_id = ?", db.TableName(), GenerateReferenceKey(model, db)).Find(&changelogs)
 
 	return changelogs
 }
@@ -49,10 +47,9 @@ func GetStateChangeLogs(model interface{}, db *gorm.DB) []StateChangeLog {
 func GetLastStateChange(model interface{}, db *gorm.DB) *StateChangeLog {
 	var (
 		changelog StateChangeLog
-		scope     = db.NewScope(model)
 	)
 
-	db.Where("refer_table = ? AND refer_id = ?", scope.TableName(), GenerateReferenceKey(model, db)).Last(&changelog)
+	db.Where("refer_table = ? AND refer_id = ?", db.TableName(), GenerateReferenceKey(model, db)).Last(&changelog)
 	if changelog.To == "" {
 		return nil
 	}
